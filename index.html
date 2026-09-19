@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flappy Bird Original Style</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        body {
+            background-color: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        #game-container {
+            position: relative;
+            width: 360px;
+            height: 580px;
+            max-width: 98vw;
+            max-height: 95vh;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.8);
+            background: #4ec0ca;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            image-rendering: pixelated;
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            color: #ffffff;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 10;
+            overflow-y: auto;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            text-align: center;
+            color: #f59e0b;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+        }
+        .btn {
+            width: 85%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            background: #22c55e;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 4px #15803d;
+            transition: transform 0.05s, background 0.1s;
+            flex-shrink: 0;
+        }
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px #15803d;
+        }
+        .btn-secondary {
+            background: #3b82f6;
+            box-shadow: 0 4px #1d4ed8;
+        }
+        .btn-danger {
+            background: #ef4444;
+            box-shadow: 0 4px #b91c1c;
+        }
+        .label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 6px;
+            color: #cbd5e1;
+            align-self: flex-start;
+            margin-left: 8%;
+            margin-right: 8%;
+        }
+        select {
+            width: 84%;
+            padding: 10px 12px;
+            font-size: 15px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #1e293b;
+            color: #ffffff;
+            outline: none;
+            font-weight: 600;
+        }
+        .stat-text {
+            font-size: 17px;
+            margin: 6px 0;
+            color: #f1f5f9;
+        }
+        .unlock-text {
+            font-size: 15px;
+            font-weight: 700;
+            color: #facc15;
+            text-align: center;
+            margin-top: 4px;
+        }
+        .xp-bar-wrap {
+            width: 84%;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 3px;
+            margin-top: 4px;
+        }
+        .xp-bar-fill {
+            height: 10px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #facc15, #f59e0b);
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="360" height="580"></canvas>
+
+        <!-- القائمة الرئيسية -->
+        <div id="menu-screen" class="overlay">
+            <div class="title" id="title-main">Flappy Bird</div>
+            <button id="btn-start" class="btn">إبدأ</button>
+            <button id="btn-stats" class="btn btn-secondary">الإحصائيات</button>
+            <button id="btn-settings" class="btn btn-secondary">الإعدادات</button>
+            <button id="btn-exit" class="btn btn-danger">الخروج</button>
+        </div>
+
+        <!-- شاشة الإحصائيات -->
+        <div id="stats-screen" class="overlay hidden">
+            <div class="title" id="title-stats">الإحصائيات</div>
+            <div class="stat-text" id="stat-best">أعلى نتيجة: 0</div>
+            <div class="stat-text" id="stat-games">عدد مرات اللعب: 0</div>
+            <div class="stat-text" id="stat-xp">XP: 0</div>
+            <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xp-bar-fill"></div></div>
+            <div class="stat-text" id="stat-xp-next" style="font-size:13px; color:#94a3b8;"></div>
+            <button class="btn btn-secondary" style="margin-top: 15px;" id="btn-back-stats">رجوع</button>
+        </div>
+
+        <!-- شاشة الإعدادات -->
+        <div id="settings-screen" class="overlay hidden">
+            <div class="title" id="title-settings">الإعدادات</div>
+
+            <div class="label" id="label-lang">اختر اللغة</div>
+            <select id="lang-select">
+                <option value="ar">العربية</option>
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="pt">Português</option>
+                <option value="it">Italiano</option>
+                <option value="ja">日本語</option>
+                <option value="zh">中文</option>
+                <option value="ko_kp">한국어 (조선)</option>
+                <option value="ko_kr">한국어 (대한민국)</option>
+            </select>
+
+            <div class="label" id="label-diff">مستوى الصعوبة</div>
+            <select id="diff-select">
+                <option value="easy" id="opt-easy">سهل</option>
+                <option value="medium" id="opt-medium" selected>متوسط</option>
+                <option value="hard" id="opt-hard">صعب</option>
+            </select>
+
+            <div class="label" id="label-map">الخريطة</div>
+            <select id="map-select"></select>
+
+            <button class="btn btn-secondary" style="margin-top: 20px;" id="btn-back-settings">رجوع</button>
+        </div>
+
+        <!-- شاشة نهاية اللعبة -->
+        <div id="gameover-screen" class="overlay hidden">
+            <div class="title" id="title-gameover">انتهت اللعبة</div>
+            <div class="stat-text" id="text-score">النتيجة: 0</div>
+            <div class="stat-text" id="text-best">أعلى نتيجة: 0</div>
+            <div class="stat-text" id="text-xp">XP: 0</div>
+            <div class="unlock-text hidden" id="text-unlock"></div>
+            <button class="btn" id="btn-restart">إعادة اللعب</button>
+            <button class="btn btn-secondary" id="btn-main-menu">القائمة الرئيسية</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        function getStorage(key, def) {
+            try {
+                const v = localStorage.getItem(key);
+                return v === null ? def : v;
+            } catch (e) { return def; }
+        }
+        function setStorage(key, val) {
+            try { localStorage.setItem(key, val); } catch (e) {}
+        }
+
+        const translations = {
+            ar: { title: "Flappy Bird", start: "إبدأ", stats: "الإحصائيات", settings: "الإعدادات", exit: "الخروج", selectLang: "اختر اللغة", difficulty: "مستوى الصعوبة", easy: "سهل", medium: "متوسط", hard: "صعب", back: "رجوع", gameOver: "انتهت اللعبة", score: "النتيجة", best: "أعلى نتيجة", games: "عدد مرات اللعب", restart: "إعادة اللعب", mainMenu: "القائمة الرئيسية", map: "الخريطة", dayMap: "النهار", nightMap: "الليل", xp: "نقاط الخبرة", unlocked: "🎉 فتحت خريطة جديدة", locked: "مقفلة", nextIn: "متبقي" },
+            en: { title: "Flappy Bird", start: "Start", stats: "Statistics", settings: "Settings", exit: "Exit", selectLang: "Select Language", difficulty: "Difficulty", easy: "Easy", medium: "Medium", hard: "Hard", back: "Back", gameOver: "Game Over", score: "Score", best: "Best Score", games: "Games Played", restart: "Restart", mainMenu: "Main Menu", map: "Map", dayMap: "Day", nightMap: "Night", xp: "XP", unlocked: "🎉 New map unlocked", locked: "Locked", nextIn: "remaining" },
+            fr: { title: "Flappy Bird", start: "Démarrer", stats: "Statistiques", settings: "Paramètres", exit: "Quitter", selectLang: "Langue", difficulty: "Difficulté", easy: "Facile", medium: "Moyen", hard: "Difficile", back: "Retour", gameOver: "Fin de partie", score: "Score", best: "Meilleur score", games: "Parties jouées", restart: "Recommencer", mainMenu: "Menu principal", map: "Carte", dayMap: "Jour", nightMap: "Nuit", xp: "XP", unlocked: "🎉 Nouvelle carte débloquée", locked: "Verrouillée", nextIn: "restant" },
+            es: { title: "Flappy Bird", start: "Iniciar", stats: "Estadísticas", settings: "Configuración", exit: "Salir", selectLang: "Idioma", difficulty: "Dificultad", easy: "Fácil", medium: "Medio", hard: "Difícil", back: "Volver", gameOver: "Fin del juego", score: "Puntuación", best: "Mejor puntuación", games: "Partidas jugadas", restart: "Reiniciar", mainMenu: "Menú principal", map: "Mapa", dayMap: "Día", nightMap: "Noche", xp: "XP", unlocked: "🎉 ¡Nuevo mapa desbloqueado!", locked: "Bloqueado", nextIn: "restante" },
+            pt: { title: "Flappy Bird", start: "Iniciar", stats: "Estatísticas", settings: "Configurações", exit: "Sair", selectLang: "Idioma", difficulty: "Dificuldade", easy: "Fácil", medium: "Médio", hard: "Difícil", back: "Voltar", gameOver: "Fim de jogo", score: "Pontuação", best: "Melhor pontuação", games: "Jogos jogados", restart: "Reiniciar", mainMenu: "Menu principal", map: "Mapa", dayMap: "Dia", nightMap: "Noite", xp: "XP", unlocked: "🎉 Novo mapa desbloqueado", locked: "Bloqueado", nextIn: "restante" },
+            it: { title: "Flappy Bird", start: "Inizia", stats: "Statistiche", settings: "Impostazioni", exit: "Esci", selectLang: "Lingua", difficulty: "Difficoltà", easy: "Facile", medium: "Medio", hard: "Difficile", back: "Indietro", gameOver: "Game Over", score: "Punteggio", best: "Miglior punteggio", games: "Partite giocate", restart: "Ricomincia", mainMenu: "Menu principale", map: "Mappa", dayMap: "Giorno", nightMap: "Notte", xp: "XP", unlocked: "🎉 Nuova mappa sbloccata", locked: "Bloccata", nextIn: "rimanenti" },
+            ja: { title: "Flappy Bird", start: "スタート", stats: "統計", settings: "設定", exit: "終了", selectLang: "言語", difficulty: "難易度", easy: "簡単", medium: "普通", hard: "難しい", back: "戻る", gameOver: "ゲームオーバー", score: "スコア", best: "ハイスコア", games: "プレイ回数", restart: "リトライ", mainMenu: "メインメニュー", map: "マップ", dayMap: "昼", nightMap: "夜", xp: "XP", unlocked: "🎉 新しいマップ解放", locked: "ロック中", nextIn: "残り" },
+            zh: { title: "Flappy Bird", start: "开始", stats: "统计", settings: "设置", exit: "退出", selectLang: "语言", difficulty: "难度", easy: "简单", medium: "中等", hard: "困难", back: "返回", gameOver: "游戏结束", score: "得分", best: "最高得分", games: "游玩次数", restart: "重新开始", mainMenu: "主菜单", map: "地图", dayMap: "白天", nightMap: "夜晚", xp: "XP", unlocked: "🎉 解锁新地图", locked: "已锁定", nextIn: "还需" },
+            ko_kp: { title: "Flappy Bird", start: "시작", stats: "통계", settings: "설정", exit: "나가기", selectLang: "언어", difficulty: "난이도", easy: "쉬움", medium: "보통", hard: "어려움", back: "뒤로", gameOver: "경기 끝", score: "점수", best: "최고 점수", games: "경기 횟수", restart: "다시 시작", mainMenu: "기본 화면", map: "지도", dayMap: "낮", nightMap: "밤", xp: "경험치", unlocked: "🎉 새 지도 해제", locked: "잠김", nextIn: "남음" },
+            ko_kr: { title: "Flappy Bird", start: "시작", stats: "통계", settings: "설정", exit: "종료", selectLang: "언어", difficulty: "난이도", easy: "쉬움", medium: "보통", hard: "어려움", back: "뒤로", gameOver: "게임 오버", score: "점수", best: "최고 점수", games: "플레이 횟수", restart: "다시 시작", mainMenu: "메인 메뉴", map: "지도", dayMap: "낮", nightMap: "밤", xp: "경험치", unlocked: "🎉 새 지도 잠금 해제", locked: "잠김", nextIn: "남음" }
+        };
+
+        let currentLang = getStorage('fb_lang', 'ar');
+        let currentDifficulty = getStorage('fb_diff', 'medium');
+        let gameState = 'MENU';
+        let score = 0;
+        let bestScore = parseInt(getStorage('fb_best', 0), 10) || 0;
+        let gamesPlayed = parseInt(getStorage('fb_games', 0), 10) || 0;
+        let frames = 0;
+        let animationId = null;
+
+        // نظام نقاط الخبرة والخرائط
+        const XP_PER_PIPE = 10;
+        const maps = {
+            day:   { unlockXP: 0 },
+            night: { unlockXP: 250 }
+        };
+        const mapOrder = ['day', 'night'];
+
+        let totalXP = parseInt(getStorage('fb_xp', 0), 10) || 0;
+        let unlockedMaps = JSON.parse(getStorage('fb_maps', '["day"]'));
+        let currentMap = getStorage('fb_current_map', 'day');
+        if (!unlockedMaps.includes(currentMap)) currentMap = 'day';
+        let justUnlockedMapKey = null;
+
+        function checkMapUnlocks() {
+            mapOrder.forEach(key => {
+                if (!unlockedMaps.includes(key) && totalXP >= maps[key].unlockXP) {
+                    unlockedMaps.push(key);
+                    justUnlockedMapKey = key;
+                    setStorage('fb_maps', JSON.stringify(unlockedMaps));
+                }
+            });
+        }
+
+        function nextLockedMapXP() {
+            const locked = mapOrder.filter(k => !unlockedMaps.includes(k));
+            if (locked.length === 0) return null;
+            return maps[locked[0]].unlockXP;
+        }
+
+        // إعدادات الصعوبة
+        const diffSettings = {
+            easy:   { gap: 145, speed: 1.8, gravity: 0.22, jump: 4.5 },
+            medium: { gap: 125, speed: 2.3, gravity: 0.26, jump: 4.8 },
+            hard:   { gap: 105, speed: 2.8, gravity: 0.30, jump: 5.2 }
+        };
+
+        // نجوم ثابتة لخريطة الليل
+        const nightStars = [];
+        for (let i = 0; i < 45; i++) {
+            nightStars.push({
+                x: Math.random() * 360,
+                y: Math.random() * 230,
+                r: Math.random() * 1.3 + 0.4,
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+
+        // ===== أداة رسم بأسلوب بكسل-آرت (مربعات بدل المنحنيات) =====
+        function pixelRect(cx, cy, i, j, cell, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(Math.round(cx + i * cell), Math.round(cy + j * cell), cell + 1, cell + 1);
+        }
+
+        function pixelBlob(cx, cy, radiusCells, cell, colorFn) {
+            for (let i = -radiusCells; i <= radiusCells; i++) {
+                for (let j = -radiusCells; j <= radiusCells; j++) {
+                    if (i * i + j * j <= radiusCells * radiusCells + radiusCells * 0.5) {
+                        const color = colorFn(i, j);
+                        if (color) pixelRect(cx, cy, i, j, cell, color);
+                    }
+                }
+            }
+        }
+
+        // ===== الطائر بأسلوب بكسل-آرت أصلي (وحدات لون مسطحة + حدّ أسود سميك) =====
+        const bird = {
+            x: 60, y: 240, radius: 14, velocity: 0, rotation: 0,
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                this.rotation = Math.min(Math.PI / 3, Math.max(-Math.PI / 4, this.velocity * 0.08));
+                ctx.rotate(this.rotation);
+
+                const cell = 3;
+                const R = 5;
+
+                // الحدّ الأسود (جسم أكبر بخلية واحدة يرسم خلف الجسم)
+                pixelBlob(0, 0, R + 1, cell, () => '#000000');
+
+                // جسم أصفر + بطن برتقالي أغمق بالأسفل
+                pixelBlob(0, 0, R, cell, (i, j) => {
+                    if (j > 1) return '#f4a11e';
+                    if (j > -1 && i < -1) return '#f4a11e';
+                    return '#ffd83d';
+                });
+
+                // بقعة العين البيضاء (أعلى يمين الجسم)
+                for (let i = 1; i <= 4; i++) {
+                    for (let j = -4; j <= -1; j++) {
+                        if ((i - 2.5) * (i - 2.5) + (j + 2.5) * (j + 2.5) <= 4) {
+                            pixelRect(0, 0, i, j, cell, '#ffffff');
+                        }
+                    }
+                }
+                // حدقة سوداء
+                pixelRect(0, 0, 3, -3, cell, '#0a0a0a');
+                pixelRect(0, 0, 3, -2, cell, '#0a0a0a');
+
+                // المنقار (شكل متدرج مدرّج بأسلوب بكسل)
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0 + 4 * cell, -1 * cell, 8 * cell, 5 * cell);
+                ctx.fillStyle = '#ff7a33';
+                ctx.fillRect(0 + 4 * cell, 0 * cell, 7 * cell, 3 * cell);
+                ctx.fillStyle = '#e85f1c';
+                ctx.fillRect(0 + 4 * cell, 1.4 * cell, 7 * cell, 1 * cell);
+
+                // الجناح الأبيض المتحرك (مستطيل بكسل بسيط)
+                let flapUp = Math.sin(frames * 0.35) > 0;
+                const wingY = flapUp ? -1 : 1;
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(-6 * cell, (wingY - 1.6) * cell, 7 * cell, 4 * cell);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-5.5 * cell, (wingY - 1.2) * cell, 6 * cell, 3 * cell);
+
+                ctx.restore();
+            },
+            flap() {
+                let config = diffSettings[currentDifficulty];
+                this.velocity = -config.jump;
+            },
+            update() {
+                if (gameState === 'PLAYING') {
+                    let config = diffSettings[currentDifficulty];
+                    this.velocity += config.gravity;
+                    this.y += this.velocity;
+
+                    if (this.y + this.radius >= canvas.height - 50) {
+                        this.y = canvas.height - 50 - this.radius;
+                        endGame();
+                    }
+                    if (this.y - this.radius <= 0) {
+                        this.y = this.radius;
+                        this.velocity = 0;
+                    }
+                }
+            },
+            reset() { this.y = 240; this.velocity = 0; this.rotation = 0; }
+        };
+
+        // ===== خلفية النهار: سماء مسطحة + غيمة أفقية + مباني فاتحة + تلال خضرا =====
+        function drawBackgroundDay() {
+            const groundY = canvas.height - 50;
+
+            ctx.fillStyle = '#3aa0d8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // شريط غيوم أفقي متعرج (أسلوب بكسل، حواف مدرّجة)
+            const cloudTop = 150;
+            const cloudBottom = 210;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, cloudTop + 14, canvas.width, cloudBottom - cloudTop - 14);
+            const bumpW = 40;
+            for (let x = -bumpW / 2; x < canvas.width + bumpW; x += bumpW) {
+                ctx.beginPath();
+                ctx.arc(x, cloudTop + 20, 24, Math.PI, 0);
+                ctx.fill();
+            }
+
+            // مباني فاتحة (بألوان مغايرة عن الأصل)
+            ctx.strokeStyle = '#a9c3d6';
+            ctx.lineWidth = 1.5;
+            const buildings = [
+                {x: -5,  w: 34, h: 66}, {x: 30,  w: 26, h: 88},
+                {x: 62,  w: 36, h: 58}, {x: 104, w: 30, h: 96},
+                {x: 140, w: 34, h: 70}, {x: 180, w: 26, h: 82},
+                {x: 212, w: 40, h: 104}, {x: 258, w: 30, h: 62},
+                {x: 294, w: 36, h: 90}, {x: 336, w: 26, h: 68}
+            ];
+            buildings.forEach(b => {
+                let y = groundY - b.h + 30;
+                ctx.fillStyle = '#dbe8ee';
+                ctx.fillRect(b.x, y, b.w, b.h);
+                ctx.strokeRect(b.x, y, b.w, b.h);
+                ctx.fillStyle = '#c3d8e3';
+                for (let wx = b.x + 4; wx < b.x + b.w - 4; wx += 8) {
+                    for (let wy = y + 6; wy < y + b.h - 6; wy += 12) {
+                        ctx.fillRect(wx, wy, 4, 6);
+                    }
+                }
+            });
+
+            // تلال خضرا متدرجة أمام المباني (بأسلوب bumps متراكبة)
+            function drawHillRow(baseY, radius, colorMain, colorShade, offset) {
+                ctx.fillStyle = colorMain;
+                ctx.beginPath();
+                ctx.moveTo(-20, groundY);
+                for (let x = -20 + offset; x < canvas.width + radius * 2; x += radius * 1.6) {
+                    ctx.arc(x, baseY, radius, Math.PI, 0);
+                }
+                ctx.lineTo(canvas.width + 20, groundY);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = colorShade;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            drawHillRow(groundY - 6, 26, '#79c65a', '#5aa63f', 10);
+            drawHillRow(groundY - 2, 22, '#8fd67a', '#6cbf58', 0);
+        }
+
+        // ===== خلفية الليل (تفتح عند 250 XP) =====
+        function drawBackgroundNight() {
+            let sky = ctx.createLinearGradient(0, 0, 0, canvas.height - 50);
+            sky.addColorStop(0, '#0b1440');
+            sky.addColorStop(0.55, '#123163');
+            sky.addColorStop(1, '#1c4a7a');
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            nightStars.forEach(s => {
+                const twinkle = 0.5 + 0.5 * Math.sin(frames * 0.04 + s.phase);
+                ctx.globalAlpha = 0.4 + twinkle * 0.6;
+                ctx.fillStyle = '#e0f2ff';
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            ctx.fillStyle = 'rgba(100, 180, 255, 0.12)';
+            ctx.fillRect(0, 95, canvas.width, 26);
+            ctx.strokeStyle = 'rgba(150, 210, 255, 0.35)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 95); ctx.lineTo(canvas.width, 95);
+            ctx.moveTo(0, 121); ctx.lineTo(canvas.width, 121);
+            ctx.stroke();
+
+            ctx.fillStyle = '#bfeef7';
+            ctx.beginPath();
+            ctx.arc(40, 360, 30, 0, Math.PI * 2);
+            ctx.arc(80, 350, 40, 0, Math.PI * 2);
+            ctx.arc(130, 360, 30, 0, Math.PI * 2);
+            ctx.arc(220, 360, 35, 0, Math.PI * 2);
+            ctx.arc(270, 350, 45, 0, Math.PI * 2);
+            ctx.arc(320, 360, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#0a1830';
+            ctx.lineWidth = 1.5;
+            const buildings = [
+                {x: 10, w: 30, h: 70}, {x: 45, w: 25, h: 90},
+                {x: 75, w: 35, h: 60}, {x: 115, w: 28, h: 100},
+                {x: 150, w: 32, h: 75}, {x: 190, w: 25, h: 85},
+                {x: 220, w: 38, h: 110}, {x: 265, w: 30, h: 65},
+                {x: 300, w: 35, h: 95}, {x: 340, w: 25, h: 70}
+            ];
+            buildings.forEach(b => {
+                let y = canvas.height - 50 - b.h;
+                ctx.fillStyle = '#16264a';
+                ctx.fillRect(b.x, y, b.w, b.h);
+                ctx.strokeRect(b.x, y, b.w, b.h);
+                ctx.fillStyle = '#f4c460';
+                for (let wx = b.x + 4; wx < b.x + b.w - 4; wx += 8) {
+                    for (let wy = y + 6; wy < canvas.height - 55; wy += 12) {
+                        if ((wx + wy) % 3 !== 0) ctx.fillRect(wx, wy, 4, 6);
+                    }
+                }
+            });
+        }
+
+        function drawBackground() {
+            if (currentMap === 'night') drawBackgroundNight();
+            else drawBackgroundDay();
+        }
+
+        // ===== الأنابيب: ألوان مسطحة بشرائط عمودية (بدل التدرج) =====
+        const pipes = [];
+        const pipeWidth = 52;
+
+        function createPipe() {
+            let config = diffSettings[currentDifficulty];
+            const minTop = 40;
+            const maxTop = canvas.height - 50 - config.gap - minTop;
+            const topHeight = Math.floor(Math.random() * (maxTop - minTop)) + minTop;
+            pipes.push({
+                x: canvas.width,
+                top: topHeight,
+                bottom: canvas.height - topHeight - config.gap - 50,
+                passed: false,
+                colorIndex: pipes.length
+            });
+        }
+
+        function getPipeColors(pipe) {
+            const orange = ['#7a4200', '#e08010', '#ffcf5c', '#e08010', '#7a4200'];
+            const green  = ['#2a4f06', '#53a018', '#9ee642', '#53a018', '#2a4f06'];
+            if (currentMap === 'night' && pipe.colorIndex % 2 === 1) return orange;
+            return green;
+        }
+
+        function drawPipes() {
+            pipes.forEach(pipe => {
+                drawSinglePipe(pipe.x, 0, pipeWidth, pipe.top, true, pipe);
+                const bottomY = canvas.height - pipe.bottom - 50;
+                drawSinglePipe(pipe.x, bottomY, pipeWidth, pipe.bottom, false, pipe);
+            });
+        }
+
+        function drawSinglePipe(x, y, width, height, isTop, pipe) {
+            if (height <= 0) return;
+            const c = getPipeColors(pipe);
+            const stripeW = width / 5;
+
+            for (let s = 0; s < 5; s++) {
+                ctx.fillStyle = c[s];
+                ctx.fillRect(x + s * stripeW, y, stripeW + 0.5, height);
+            }
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(x, y, width, height);
+
+            const capHeight = 22;
+            const capX = x - 3;
+            const capWidth = width + 6;
+            const capY = isTop ? y + height - capHeight : y;
+            const capStripeW = capWidth / 5;
+            for (let s = 0; s < 5; s++) {
+                ctx.fillStyle = c[s];
+                ctx.fillRect(capX + s * capStripeW, capY, capStripeW + 0.5, capHeight);
+            }
+            ctx.strokeRect(capX, capY, capWidth, capHeight);
+        }
+
+        function updatePipes() {
+            if (gameState !== 'PLAYING') return;
+
+            let config = diffSettings[currentDifficulty];
+            if (frames % 95 === 0) createPipe();
+
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                let pipe = pipes[i];
+                pipe.x -= config.speed;
+
+                if (
+                    bird.x + bird.radius > pipe.x - 3 &&
+                    bird.x - bird.radius < pipe.x + pipeWidth + 3 &&
+                    (bird.y - bird.radius < pipe.top || bird.y + bird.radius > canvas.height - pipe.bottom - 50)
+                ) {
+                    endGame();
+                }
+
+                if (pipe.x + pipeWidth < bird.x && !pipe.passed) {
+                    score++;
+                    totalXP += XP_PER_PIPE;
+                    setStorage('fb_xp', totalXP);
+                    checkMapUnlocks();
+                    if (score > bestScore) {
+                        bestScore = score;
+                        setStorage('fb_best', bestScore);
+                    }
+                    pipe.passed = true;
+                }
+
+                if (pipe.x + pipeWidth < -10) pipes.splice(i, 1);
+            }
+        }
+
+        // ===== الأرضية =====
+        function drawGroundDay() {
+            const groundY = canvas.height - 50;
+            ctx.fillStyle = '#ded895';
+            ctx.fillRect(0, groundY, canvas.width, 50);
+
+            ctx.fillStyle = '#73ce28';
+            ctx.fillRect(0, groundY, canvas.width, 12);
+
+            ctx.strokeStyle = '#53a018';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY + 12);
+            ctx.lineTo(canvas.width, groundY + 12);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(0, groundY, canvas.width, 50);
+        }
+
+        function drawGroundNight() {
+            const groundY = canvas.height - 50;
+            ctx.fillStyle = '#4a2c1a';
+            ctx.fillRect(0, groundY, canvas.width, 50);
+
+            ctx.fillStyle = '#3f8f2a';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY + 10);
+            for (let x = 0; x <= canvas.width; x += 14) {
+                ctx.lineTo(x + 7, groundY + (Math.floor(x / 14) % 2 === 0 ? 2 : 10));
+            }
+            ctx.lineTo(canvas.width, groundY + 10);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.lineTo(0, groundY);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#e08010';
+            for (let x = 6; x < canvas.width; x += 16) {
+                ctx.beginPath();
+                ctx.arc(x, groundY + 2, 3, Math.PI, 0);
+                ctx.fill();
+            }
+
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(0, groundY, canvas.width, 50);
+        }
+
+        function drawGround() {
+            if (currentMap === 'night') drawGroundNight();
+            else drawGroundDay();
+        }
+
+        function drawScore() {
+            if (gameState === 'PLAYING') {
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 5;
+                ctx.font = '800 36px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.strokeText(String(score), canvas.width / 2, 60);
+                ctx.fillText(String(score), canvas.width / 2, 60);
+
+                ctx.font = '700 14px sans-serif';
+                ctx.lineWidth = 3;
+                const xpText = `+${score * XP_PER_PIPE} XP`;
+                ctx.strokeText(xpText, canvas.width / 2, 82);
+                ctx.fillStyle = '#facc15';
+                ctx.fillText(xpText, canvas.width / 2, 82);
+            }
+        }
+
+        function gameLoop() {
+            frames++;
+            bird.update();
+            updatePipes();
+
+            drawBackground();
+            drawPipes();
+            drawGround();
+            bird.draw();
+            drawScore();
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // إدارة الشاشات
+        function showScreen(id) {
+            document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            if (id === 'stats-screen') updateStatsScreen();
+            if (id === 'settings-screen') populateMapOptions();
+        }
+
+        function updateStatsScreen() {
+            const t = translations[currentLang];
+            document.getElementById('stat-best').textContent = `${t.best}: ${bestScore}`;
+            document.getElementById('stat-games').textContent = `${t.games}: ${gamesPlayed}`;
+            document.getElementById('stat-xp').textContent = `${t.xp}: ${totalXP}`;
+
+            const nextXP = nextLockedMapXP();
+            const fillEl = document.getElementById('xp-bar-fill');
+            const nextEl = document.getElementById('stat-xp-next');
+            if (nextXP === null) {
+                fillEl.style.width = '100%';
+                nextEl.textContent = '';
+            } else {
+                const pct = Math.min(100, (totalXP / nextXP) * 100);
+                fillEl.style.width = pct + '%';
+                nextEl.textContent = `${nextXP - totalXP} ${t.xp} ${t.nextIn}`;
+            }
+        }
+
+        function populateMapOptions() {
+            const t = translations[currentLang];
+            const mapNames = { day: t.dayMap, night: t.nightMap };
+            const sel = document.getElementById('map-select');
+            sel.innerHTML = '';
+            mapOrder.forEach(key => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                const isUnlocked = unlockedMaps.includes(key);
+                opt.textContent = isUnlocked ? mapNames[key] : `${mapNames[key]} 🔒 ${maps[key].unlockXP} XP`;
+                opt.disabled = !isUnlocked;
+                if (key === currentMap) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        function startGame() {
+            gameState = 'PLAYING';
+            score = 0;
+            frames = 0;
+            pipes.length = 0;
+            bird.reset();
+            document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
+            if (animationId) cancelAnimationFrame(animationId);
+            gameLoop();
+        }
+
+        function endGame() {
+            if (gameState !== 'PLAYING') return;
+            gameState = 'MENU';
+            cancelAnimationFrame(animationId);
+
+            gamesPlayed++;
+            setStorage('fb_games', gamesPlayed);
+
+            const t = translations[currentLang];
+            document.getElementById('text-score').textContent = `${t.score}: ${score}`;
+            document.getElementById('text-best').textContent = `${t.best}: ${bestScore}`;
+            document.getElementById('text-xp').textContent = `${t.xp}: ${totalXP}`;
+
+            const unlockEl = document.getElementById('text-unlock');
+            if (justUnlockedMapKey) {
+                const mapNames = { day: t.dayMap, night: t.nightMap };
+                unlockEl.textContent = `${t.unlocked}: ${mapNames[justUnlockedMapKey]}!`;
+                unlockEl.classList.remove('hidden');
+                justUnlockedMapKey = null;
+            } else {
+                unlockEl.classList.add('hidden');
+            }
+
+            showScreen('gameover-screen');
+        }
+
+        function exitGame() {
+            gameState = 'MENU';
+            if (animationId) cancelAnimationFrame(animationId);
+            drawBackground();
+            drawGround();
+            bird.reset();
+            bird.draw();
+            showScreen('menu-screen');
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            setStorage('fb_lang', lang);
+            applyTranslations();
+        }
+
+        function changeDifficulty(diff) {
+            currentDifficulty = diff;
+            setStorage('fb_diff', diff);
+        }
+
+        function changeMap(mapKey) {
+            if (!unlockedMaps.includes(mapKey)) return;
+            currentMap = mapKey;
+            setStorage('fb_current_map', mapKey);
+            drawBackground();
+            drawGround();
+            bird.draw();
+        }
+
+        function applyTranslations() {
+            const t = translations[currentLang];
+            document.getElementById('title-main').textContent = t.title;
+            document.getElementById('btn-start').textContent = t.start;
+            document.getElementById('btn-stats').textContent = t.stats;
+            document.getElementById('btn-settings').textContent = t.settings;
+            document.getElementById('btn-exit').textContent = t.exit;
+
+            document.getElementById('title-stats').textContent = t.stats;
+            document.getElementById('btn-back-stats').textContent = t.back;
+
+            document.getElementById('title-settings').textContent = t.settings;
+            document.getElementById('label-lang').textContent = t.selectLang;
+            document.getElementById('label-diff').textContent = t.difficulty;
+            document.getElementById('opt-easy').textContent = t.easy;
+            document.getElementById('opt-medium').textContent = t.medium;
+            document.getElementById('opt-hard').textContent = t.hard;
+            document.getElementById('label-map').textContent = t.map;
+            document.getElementById('btn-back-settings').textContent = t.back;
+
+            document.getElementById('title-gameover').textContent = t.gameOver;
+            document.getElementById('btn-restart').textContent = t.restart;
+            document.getElementById('btn-main-menu').textContent = t.mainMenu;
+
+            populateMapOptions();
+            updateStatsScreen();
+        }
+
+        // ربط الأزرار بالأحداث
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-stats').addEventListener('click', () => showScreen('stats-screen'));
+        document.getElementById('btn-settings').addEventListener('click', () => showScreen('settings-screen'));
+        document.getElementById('btn-exit').addEventListener('click', exitGame);
+        document.getElementById('btn-back-stats').addEventListener('click', () => showScreen('menu-screen'));
+        document.getElementById('btn-back-settings').addEventListener('click', () => showScreen('menu-screen'));
+        document.getElementById('btn-restart').addEventListener('click', startGame);
+        document.getElementById('btn-main-menu').addEventListener('click', () => showScreen('menu-screen'));
+
+        document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
+        document.getElementById('diff-select').addEventListener('change', (e) => changeDifficulty(e.target.value));
+        document.getElementById('map-select').addEventListener('change', (e) => changeMap(e.target.value));
+
+        function handleFlap(e) {
+            if (gameState === 'PLAYING') {
+                e.preventDefault();
+                bird.flap();
+            }
+        }
+        canvas.addEventListener('mousedown', handleFlap);
+        canvas.addEventListener('touchstart', handleFlap, { passive: false });
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') handleFlap(e);
+        });
+
+        // تهيئة أولية
+        document.getElementById('lang-select').value = currentLang;
+        document.getElementById('diff-select').value = currentDifficulty;
+        checkMapUnlocks();
+        justUnlockedMapKey = null;
+        applyTranslations();
+        drawBackground();
+        drawGround();
+        bird.draw();
+    </script>
+</body>
+</html>
